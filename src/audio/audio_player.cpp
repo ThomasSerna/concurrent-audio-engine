@@ -114,6 +114,20 @@ bool AudioPlayer::pause() {
     return true;
 }
 
+bool AudioPlayer::close()
+{
+    refresh();
+
+    if (pid <= 0) return true;
+
+    kill(pid, SIGTERM);
+    waitpid(pid, nullptr, 0);
+
+    pid = -1;
+    state = PlayerState::STOPPED;
+    return true;
+}
+
 PlayerState AudioPlayer::getState() {
 
     refresh();

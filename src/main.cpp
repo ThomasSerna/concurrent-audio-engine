@@ -101,6 +101,7 @@ int main() {
 
 
         if (state.should_exit) {
+            cmd_close();
             app.Exit();
         }
 
@@ -132,12 +133,12 @@ int main() {
 
         // Crea los elementos de la consola, cancion y cola
         auto input_line = hbox({
-            text(" > ") | bold,
+            text(" > ") | bold | color(Color::DarkCyan),
             input->Render() | flex
         });
 
         auto console = vbox({
-            text("Consola") | center | bold,
+            text("Consola") | center | bold | color(Color::CyanLight),
             separator(),
             vbox(console_elements) | flex,
             separator(),
@@ -145,12 +146,14 @@ int main() {
         }) | border;
 
         auto song = vbox({
-            text("Cancion") | center | bold,
+            text("Cancion") | center | bold | color(Color::CyanLight),
+            separator(),
             filler()
         }) | border | xflex_grow_factor(2);
 
         auto queue = vbox({
-            text("Cola") | center | bold,
+            text("Cola de reproduccion") | center | bold | color(Color::CyanLight),
+            separator(),
             filler()
         }) | border | xflex_grow_factor(1);
 

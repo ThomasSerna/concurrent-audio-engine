@@ -118,3 +118,9 @@ int cmd_stop(const std::vector<std::string>&, AppState& state) {
 
     return 0;
 }
+
+int cmd_close()
+{
+    player.close();
+    return 1;
+}

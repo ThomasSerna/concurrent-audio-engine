@@ -23,5 +23,7 @@ public:
     bool resume();
     bool stop();
 
+    bool close();
+
     PlayerState getState();
 };
