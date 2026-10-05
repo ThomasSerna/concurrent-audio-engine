@@ -46,12 +46,12 @@ bool AudioPlayer::play(const std::string& path) {
             "-nodisp",
             "-autoexit",
             "-loglevel",
-            "quiet",
-            "-nostdin",
+            "error",
             path.c_str(),
             (char*) nullptr
         );
 
+        perror("Error ejecutando ffplay");
         _exit(1);
     }
 
