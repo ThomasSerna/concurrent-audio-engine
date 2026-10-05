@@ -1,0 +1,6 @@
+*.o
+.idea/
+.vscode/
+cmake-build-debug/
+build/
+
