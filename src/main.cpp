@@ -2,7 +2,6 @@
 #include <ftxui/component/component.hpp>
 #include <ftxui/dom/elements.hpp>
 
-#include <algorithm>
 #include <ftxui/screen/color.hpp>
 
 #include <string>
@@ -62,15 +61,15 @@ int main() {
     register_basic_commands();
 
     // Dar color al placeholder del input
-    input_options.transform = [](InputState state) {
+    input_options.transform = [](InputState input_state) {
 
-        if (state.is_placeholder) {
-            return state.element
+        if (input_state.is_placeholder) {
+            return input_state.element
                 | color(Color::GrayDark)
                 | bgcolor(Color::Black);
         }
 
-        return state.element
+        return input_state.element
             | color(Color::White)
             | bgcolor(Color::Black);
     };

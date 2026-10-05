@@ -5,7 +5,7 @@ void register_basic_commands() {
     commands.push_back({
         "help",
         "help",
-        "Muestra la ayuda",
+        "Muestra los detalles de los comandos del programa",
         cmd_help
     });
 

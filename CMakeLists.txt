@@ -18,7 +18,7 @@ FetchContent_MakeAvailable(ftxui)
 add_executable(
         concurrent-audio-engine
         src/main.cpp
-        src/commands/commands.cpp
+        src/commands/basic_commands.cpp
         src/commands/commands.hpp
 )
 
