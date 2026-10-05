@@ -27,11 +27,10 @@ inline std::vector<Command> commands;
 
 ParsedCommand parse_command(const std::string& line);
 
-bool execute_command(
-    const ParsedCommand& command,
-    AppState& state
-);
+bool execute_command(const ParsedCommand& command, AppState& state);
 
 int cmd_help(const std::vector<std::string>& args, AppState& state);
 int cmd_clear(const std::vector<std::string>& args, AppState& state);
 int cmd_exit(const std::vector<std::string>& args, AppState& state);
+
+void register_basic_commands();

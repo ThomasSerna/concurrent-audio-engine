@@ -2,12 +2,17 @@
 #include <ftxui/component/component.hpp>
 #include <ftxui/dom/elements.hpp>
 
+#include <algorithm>
+#include <ftxui/screen/color.hpp>
+
 #include <string>
 #include <vector>
 #include <sstream>
 #include "commands/commands.hpp"
 
 using namespace ftxui;
+
+const std::size_t MAX_VISIBLE_LINES = 20;
 
 ParsedCommand parse_command(const std::string& line) {
 
@@ -50,10 +55,27 @@ int main() {
 
     // Leer texto desde la seccion de consola
     std::string command_line;
-    std::vector<std::string> console_lines;
     InputOption input_options;
     AppState state;
 
+    // Registrar comandos en AppState
+    register_basic_commands();
+
+    // Dar color al placeholder del input
+    input_options.transform = [](InputState state) {
+
+        if (state.is_placeholder) {
+            return state.element
+                | color(Color::GrayDark)
+                | bgcolor(Color::Black);
+        }
+
+        return state.element
+            | color(Color::White)
+            | bgcolor(Color::Black);
+    };
+
+    // Ejecuta el comando al presionar enter
     input_options.on_enter = [&] {
         if (command_line.empty()) {
             return;
@@ -63,9 +85,7 @@ int main() {
             "> " + command_line
         );
 
-        ParsedCommand parsed =
-            parse_command(command_line);
-
+        ParsedCommand parsed = parse_command(command_line);
 
         bool found =
             execute_command(parsed, state);
@@ -84,10 +104,10 @@ int main() {
             app.Exit();
         }
 
-
         command_line.clear();
     };
 
+    // Crea el input
     auto input = Input(
         &command_line,
         "Escribe un comando...",
@@ -95,37 +115,48 @@ int main() {
     );
 
 
-
     // Renderizado de las secciones
     auto renderer = Renderer(input, [&] {
 
         Elements console_elements;
-        for (const auto& line : console_lines) {
 
+        // Calcula y renderiza solo las primeras 20 lineas
+        std::size_t start =
+            state.console_lines.size() > MAX_VISIBLE_LINES ? state.console_lines.size() - MAX_VISIBLE_LINES : 0;
+
+        for (std::size_t i = start; i < state.console_lines.size(); ++i) {
             console_elements.push_back(
-            text(" " + line)
-        );
+                text(" " + state.console_lines[i])
+            );
         }
 
+        // Crea los elementos de la consola, cancion y cola
+        auto input_line = hbox({
+            text(" > ") | bold,
+            input->Render() | flex
+        });
+
         auto console = vbox({
-            text("Consola") | center,
+            text("Consola") | center | bold,
             separator(),
-            vbox(console_elements),
-            filler(),
-            hbox({
-                text(" > "),
-                input->Render()
-            })
+            vbox(console_elements) | flex,
+            separator(),
+            input_line
         }) | border;
 
-        // Secciones
-        auto song = text("Cancion") | center | border| flex;
-        auto queue = text("Cola") | center | border| flex;
+        auto song = vbox({
+            text("Cancion") | center | bold,
+            filler()
+        }) | border | xflex_grow_factor(2);
 
-        // Barra superior
+        auto queue = vbox({
+            text("Cola") | center | bold,
+            filler()
+        }) | border | xflex_grow_factor(1);
+
         auto top = hbox({
-            song | flex_grow_factor(2),
-            queue | flex_grow_factor(1)
+            song,
+            queue
         });
 
         return vbox({
