@@ -1,4 +1,4 @@
-#include "commands.hpp"
+#include "commands.h"
 
 void register_basic_commands() {
 

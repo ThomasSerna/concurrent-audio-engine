@@ -19,7 +19,10 @@ add_executable(
         concurrent-audio-engine
         src/main.cpp
         src/commands/basic_commands.cpp
-        src/commands/commands.hpp
+        src/commands/commands.h
+        src/audio/audio_player.cpp
+        src/audio/audio_player.h
+        src/commands/audio_commands.cpp
 )
 
 target_link_libraries(

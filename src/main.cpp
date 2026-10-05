@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 #include <sstream>
-#include "commands/commands.hpp"
+#include "commands/commands.h"
 
 using namespace ftxui;
 
@@ -59,6 +59,7 @@ int main() {
 
     // Registrar comandos en AppState
     register_basic_commands();
+    register_audio_commands();
 
     // Dar color al placeholder del input
     input_options.transform = [](InputState input_state) {

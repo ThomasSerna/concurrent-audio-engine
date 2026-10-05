@@ -33,4 +33,10 @@ int cmd_help(const std::vector<std::string>& args, AppState& state);
 int cmd_clear(const std::vector<std::string>& args, AppState& state);
 int cmd_exit(const std::vector<std::string>& args, AppState& state);
 
+int cmd_play(const std::vector<std::string>& args, AppState& state);
+int cmd_stop(const std::vector<std::string>& args, AppState& state);
+int cmd_resume(const std::vector<std::string>& args, AppState& state);
+int cmd_pause(const std::vector<std::string>& args, AppState& state);
+
 void register_basic_commands();
+void register_audio_commands();
