@@ -1,5 +1,6 @@
 #pragma once
 
+#include <mutex>
 #include <string>
 
 #if defined(_WIN32)
@@ -25,6 +26,10 @@ private:
 #endif
     PlayerState state = PlayerState::STOPPED;
 
+    // El motor de reproduccion (hilo propio) y los comandos (hilo de la UI)
+    // usan el mismo AudioPlayer. Recursivo porque play() llama a stop().
+    std::recursive_mutex mutex_;
+
     void refresh();
 
 public:
@@ -36,4 +41,4 @@ public:
     bool close();
 
     PlayerState getState();
-};
+};

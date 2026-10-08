@@ -28,6 +28,10 @@ add_executable(
   src/playlist/playlist.h    # NUEVO
   src/playlist/rw_lock.h     # NUEVO
   src/playlist/track.h       # NUEVO
+  src/playlist/path_utf8.h   # NUEVO
+  src/playback/playback_engine.cpp  # NUEVO
+  src/playback/playback_engine.h    # NUEVO
+  src/commands/playlist_commands.cpp  # NUEVO
 )
 
 # NUEVO: permite escribir #include "playlist/playlist.h"
@@ -44,4 +48,4 @@ target_link_libraries(
   ftxui::screen
   ftxui::dom
   ftxui::component
-)
+)

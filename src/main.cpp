@@ -4,10 +4,14 @@
 
 #include <ftxui/screen/color.hpp>
 
+#include <algorithm>
 #include <string>
 #include <vector>
 #include <sstream>
 #include "commands/commands.h"
+#include "playback/playback_engine.h"
+#include "playlist/path_utf8.h"
+#include "playlist/playlist.h"
 
 using namespace ftxui;
 
@@ -57,9 +61,21 @@ int main() {
     InputOption input_options;
     AppState state;
 
+    // Playlist compartida + motor de reproduccion (hilo propio).
+    // Orden de declaracion importa: el motor se destruye ANTES que la playlist.
+    playlist::Playlist playlist;
+    PlaybackEngine engine(playlist);
+    state.playlist = &playlist;
+    state.engine = &engine;
+
+    // El hilo del motor pide redibujar cuando cambia la pista o termina.
+    engine.set_redraw_callback([&] { app.PostEvent(Event::Custom); });
+    engine.start();
+
     // Registrar comandos en AppState
     register_basic_commands();
     register_audio_commands();
+    register_playlist_commands();
 
     // Dar color al placeholder del input
     input_options.transform = [](InputState input_state) {
@@ -101,7 +117,7 @@ int main() {
 
 
         if (state.should_exit) {
-            cmd_close();
+            engine.shutdown();
             app.Exit();
         }
 
@@ -118,6 +134,11 @@ int main() {
 
     // Renderizado de las secciones
     auto renderer = Renderer(input, [&] {
+
+        // Mensajes que el hilo del motor dejo para la consola (errores, etc.)
+        for (auto& message : engine.take_messages()) {
+            state.console_lines.push_back(std::move(message));
+        }
 
         Elements console_elements;
 
@@ -145,16 +166,52 @@ int main() {
             input_line
         }) | border;
 
+        // Panel "Cancion": pista actual y estado del reproductor
+        Elements song_elements;
+        if (const auto current = playlist.current()) {
+            std::string status = "Detenido";
+            if (!engine.user_stopped()) {
+                switch (engine.state()) {
+                    case PlayerState::PLAYING: status = "Reproduciendo"; break;
+                    case PlayerState::PAUSED:  status = "Pausado"; break;
+                    case PlayerState::STOPPED: status = "Cargando..."; break;
+                }
+            }
+            song_elements.push_back(text(" " + current->title) | bold);
+            song_elements.push_back(text(" " + playlist::to_utf8(current->path)) | dim);
+            song_elements.push_back(text(" Estado: " + status));
+        } else {
+            song_elements.push_back(text(" Sin cancion actual") | dim);
+        }
+
+        // Panel "Cola": una sola lectura consistente de la lista (snapshot)
+        Elements queue_elements;
+        const auto snapshot = playlist.snapshot();
+        const std::size_t shown = std::min(snapshot.tracks.size(), MAX_VISIBLE_LINES);
+        for (std::size_t i = 0; i < shown; ++i) {
+            const auto& track = snapshot.tracks[i];
+            const bool is_current = snapshot.current && *snapshot.current == track.id;
+            auto line = text((is_current ? " > " : "   ") + std::to_string(i + 1) + ". " + track.title);
+            queue_elements.push_back(is_current ? line | bold | color(Color::Green) : line);
+        }
+        if (snapshot.tracks.size() > shown) {
+            queue_elements.push_back(
+                text("   ... y " + std::to_string(snapshot.tracks.size() - shown) + " mas") | dim);
+        }
+        if (queue_elements.empty()) {
+            queue_elements.push_back(text(" La cola esta vacia") | dim);
+        }
+
         auto song = vbox({
             text("Cancion") | center | bold | color(Color::CyanLight),
             separator(),
-            filler()
+            vbox(song_elements) | flex
         }) | border | xflex_grow_factor(2);
 
         auto queue = vbox({
             text("Cola de reproduccion") | center | bold | color(Color::CyanLight),
             separator(),
-            filler()
+            vbox(queue_elements) | flex
         }) | border | xflex_grow_factor(1);
 
         auto top = hbox({
@@ -170,5 +227,8 @@ int main() {
 
     app.Loop(renderer);
 
+    // Si se salio por Ctrl+C u otra via distinta del comando exit.
+    engine.shutdown();
+
     return 0;
-}
+}

@@ -40,6 +40,7 @@ void AudioPlayer::refresh() {
 }
 
 bool AudioPlayer::play(const std::string& path) {
+    std::lock_guard<std::recursive_mutex> guard(mutex_);
     refresh();
 
     if (!file_exists_and_readable(path)) {
@@ -80,6 +81,7 @@ bool AudioPlayer::play(const std::string& path) {
 }
 
 bool AudioPlayer::stop() {
+    std::lock_guard<std::recursive_mutex> guard(mutex_);
     refresh();
 
     if (pid <= 0 || process_handle == nullptr) {
@@ -102,6 +104,7 @@ bool AudioPlayer::stop() {
 }
 
 bool AudioPlayer::resume() {
+    std::lock_guard<std::recursive_mutex> guard(mutex_);
     refresh();
 
     if (state != PlayerState::PAUSED || pid <= 0 || process_handle == nullptr) {
@@ -117,6 +120,7 @@ bool AudioPlayer::resume() {
 }
 
 bool AudioPlayer::pause() {
+    std::lock_guard<std::recursive_mutex> guard(mutex_);
     refresh();
 
     if (state != PlayerState::PLAYING || pid <= 0 || process_handle == nullptr) {
@@ -132,6 +136,7 @@ bool AudioPlayer::pause() {
 }
 
 bool AudioPlayer::close() {
+    std::lock_guard<std::recursive_mutex> guard(mutex_);
     refresh();
 
     if (pid <= 0 || process_handle == nullptr) {
@@ -150,6 +155,7 @@ bool AudioPlayer::close() {
 }
 
 PlayerState AudioPlayer::getState() {
+    std::lock_guard<std::recursive_mutex> guard(mutex_);
     refresh();
     return state;
 }
@@ -178,6 +184,7 @@ void AudioPlayer::refresh() {
 }
 
 bool AudioPlayer::play(const std::string& path) {
+    std::lock_guard<std::recursive_mutex> guard(mutex_);
 
     refresh();
 
@@ -218,6 +225,7 @@ bool AudioPlayer::play(const std::string& path) {
 }
 
 bool AudioPlayer::stop() {
+    std::lock_guard<std::recursive_mutex> guard(mutex_);
 
     refresh();
 
@@ -241,6 +249,7 @@ bool AudioPlayer::stop() {
 }
 
 bool AudioPlayer::resume() {
+    std::lock_guard<std::recursive_mutex> guard(mutex_);
 
     refresh();
 
@@ -256,6 +265,7 @@ bool AudioPlayer::resume() {
 }
 
 bool AudioPlayer::pause() {
+    std::lock_guard<std::recursive_mutex> guard(mutex_);
 
     refresh();
 
@@ -272,6 +282,7 @@ bool AudioPlayer::pause() {
 
 bool AudioPlayer::close()
 {
+    std::lock_guard<std::recursive_mutex> guard(mutex_);
     refresh();
 
     if (pid <= 0) return true;
@@ -285,10 +296,11 @@ bool AudioPlayer::close()
 }
 
 PlayerState AudioPlayer::getState() {
+    std::lock_guard<std::recursive_mutex> guard(mutex_);
 
     refresh();
 
     return state;
 }
 
-#endif
+#endif
