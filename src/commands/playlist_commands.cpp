@@ -185,6 +185,7 @@ int cmd_remove(const std::vector<std::string>& args, AppState& state) {
         state.console_lines.push_back("No existe la posicion " + args[0]);
         return 1;
     }
+    state.engine->notify_change();
     state.console_lines.push_back("Eliminada la posicion " + args[0]);
     return 0;
 }
@@ -214,6 +215,7 @@ int cmd_qclear(const std::vector<std::string>&, AppState& state) {
         return 1;
     }
     state.playlist->clear();
+    state.engine->notify_change();
     state.console_lines.push_back("Lista vaciada");
     return 0;
 }

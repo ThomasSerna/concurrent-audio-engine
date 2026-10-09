@@ -1,6 +1,7 @@
 #include "playback/playback_engine.h"
 
 #include <chrono>
+#include <filesystem>
 #include <utility>
 
 #include "playlist/path_utf8.h"
@@ -123,13 +124,30 @@ void PlaybackEngine::run() {
         }
         request_redraw();
 
+        // Preparacion de la siguiente pista: mientras suena la actual, se lanza ya
+        // su decodificador. Si no existe, se avisa antes de llegar a ella.
+        if (const auto next = playlist_.peek_next()) {
+            if (!std::filesystem::is_regular_file(next->path)) {
+                post_message("Aviso: la siguiente pista no existe: " +
+                             playlist::to_utf8(next->path));
+            } else {
+                player_.prefetch(playlist::to_utf8(next->path));
+            }
+        }
+
         const auto started = std::chrono::steady_clock::now();
         bool natural_end = false;
 
         for (;;) {
             {
                 std::unique_lock<std::mutex> lock(control_mutex_);
-                control_cv_.wait_for(lock, 100ms, [&] { return shutting_down_; });
+                // Despierta de inmediato ante stop, cierre o cambio de seleccion.
+                // El sondeo de 100 ms queda solo para detectar el fin natural de ffplay.
+                control_cv_.wait_for(lock, 100ms, [&] {
+                    return shutting_down_ ||
+                           stop_count_.load(std::memory_order_acquire) != stop_seen ||
+                           playlist_.selection_epoch() != selection->epoch;
+                });
                 if (shutting_down_) {
                     break;
                 }
@@ -158,6 +176,10 @@ void PlaybackEngine::run() {
         }
         request_redraw();
     }
+}
+
+void PlaybackEngine::notify_change() {
+    control_cv_.notify_all();
 }
 
 void PlaybackEngine::post_message(std::string message) {

@@ -49,6 +49,10 @@ public:
     PlayerState state();
     bool user_stopped();
 
+    // Despierta al motor de inmediato (lo llaman los comandos que cambian la
+    // lista, p. ej. remove/qclear, para que la reaccion no espere al sondeo).
+    void notify_change();
+
     // Mensajes del motor (errores, etc.) para volcarlos a la consola de la UI.
     std::vector<std::string> take_messages();
 

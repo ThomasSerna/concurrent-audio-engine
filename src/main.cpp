@@ -180,6 +180,9 @@ int main() {
             song_elements.push_back(text(" " + current->title) | bold);
             song_elements.push_back(text(" " + playlist::to_utf8(current->path)) | dim);
             song_elements.push_back(text(" Estado: " + status));
+            if (const auto next = playlist.peek_next()) {
+                song_elements.push_back(text(" Siguiente: " + next->title) | dim);
+            }
         } else {
             song_elements.push_back(text(" Sin cancion actual") | dim);
         }

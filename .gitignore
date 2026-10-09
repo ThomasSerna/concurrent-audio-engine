@@ -1,6 +1,7 @@
 *.o
 .idea/
 .vscode/
-cmake-build-debug/
+cmake-build-*/
 build/
+build-*/
 
