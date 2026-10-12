@@ -1,3 +1,4 @@
+# Cmake for compiling the project in a profesional way
 cmake_minimum_required(VERSION 3.20)
 project(concurrent-audio-engine LANGUAGES CXX)
 

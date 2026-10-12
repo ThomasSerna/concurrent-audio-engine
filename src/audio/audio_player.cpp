@@ -164,7 +164,7 @@ PlayerState AudioPlayer::getState() {
 }
 
 bool AudioPlayer::prefetch(const std::string&) {
-    return false;  // la precarga solo existe en la ruta POSIX
+    return false;  
 }
 
 //Linux version (Comments will be focused here)

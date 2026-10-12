@@ -1,22 +1,28 @@
+//Include of external programs needed for this
 #include <ftxui/component/app.hpp>
 #include <ftxui/component/component.hpp>
 #include <ftxui/dom/elements.hpp>
-
 #include <ftxui/screen/color.hpp>
 
+//Include of required tools
 #include <algorithm>
 #include <string>
 #include <vector>
 #include <sstream>
+
+//Include of required programs
 #include "commands/commands.h"
 #include "playback/playback_engine.h"
 #include "playlist/path_utf8.h"
 #include "playlist/playlist.h"
 
+//Stablishing the namespace for simplifying processes 
 using namespace ftxui;
 
+//Stablishing the visible lines in console
 const std::size_t MAX_VISIBLE_LINES = 20;
 
+//Parse the command given by the user
 ParsedCommand parse_command(const std::string& line) {
 
     ParsedCommand command;
@@ -34,6 +40,7 @@ ParsedCommand parse_command(const std::string& line) {
     return command;
 }
 
+//Execute the command written down by the user
 bool execute_command(const ParsedCommand& parsed, AppState& state) {
 
     for (const auto& command : commands) {
@@ -53,31 +60,31 @@ bool execute_command(const ParsedCommand& parsed, AppState& state) {
 }
 
 int main() {
-
+    //Executing the player
     auto app = App::Fullscreen();
 
-    // Leer texto desde la seccion de consola
+    //Reading the text indicated in console
     std::string command_line;
     InputOption input_options;
     AppState state;
 
-    // Playlist compartida + motor de reproduccion (hilo propio).
-    // Orden de declaracion importa: el motor se destruye ANTES que la playlist.
+    //Shared playlist plus engine player on its own thread
+    //The engine gets destroyed before the playlist for good practices
     playlist::Playlist playlist;
     PlaybackEngine engine(playlist);
     state.playlist = &playlist;
     state.engine = &engine;
 
-    // El hilo del motor pide redibujar cuando cambia la pista o termina.
+    //The engine thread asks to redraw the console when a track end
     engine.set_redraw_callback([&] { app.PostEvent(Event::Custom); });
     engine.start();
 
-    // Registrar comandos en AppState
+    // Register commands in AppState
     register_basic_commands();
     register_audio_commands();
     register_playlist_commands();
 
-    // Dar color al placeholder del input
+    // Give color to the placeholder input
     input_options.transform = [](InputState input_state) {
 
         if (input_state.is_placeholder) {
@@ -91,7 +98,9 @@ int main() {
             | bgcolor(Color::Black);
     };
 
-    // Ejecuta el comando al presionar enter
+    //Executing the command when clicking enter
+    //and returning an error message if it is not
+    //found
     input_options.on_enter = [&] {
         if (command_line.empty()) {
             return;
@@ -124,7 +133,7 @@ int main() {
         command_line.clear();
     };
 
-    // Crea el input
+    //Create the input
     auto input = Input(
         &command_line,
         "Escribe un comando...",
@@ -132,17 +141,17 @@ int main() {
     );
 
 
-    // Renderizado de las secciones
+    //Renderizing of the sections
     auto renderer = Renderer(input, [&] {
 
-        // Mensajes que el hilo del motor dejo para la consola (errores, etc.)
+        //Messages that the thread of the engine leave for the console
         for (auto& message : engine.take_messages()) {
             state.console_lines.push_back(std::move(message));
         }
 
         Elements console_elements;
 
-        // Calcula y renderiza solo las primeras 20 lineas
+        //Calculates and renderizes only the first 20 lines
         std::size_t start =
             state.console_lines.size() > MAX_VISIBLE_LINES ? state.console_lines.size() - MAX_VISIBLE_LINES : 0;
 
@@ -152,7 +161,7 @@ int main() {
             );
         }
 
-        // Crea los elementos de la consola, cancion y cola
+        //Crates elements of the console, songs and tail
         auto input_line = hbox({
             text(" > ") | bold | color(Color::DarkCyan),
             input->Render() | flex
@@ -166,7 +175,7 @@ int main() {
             input_line
         }) | border;
 
-        // Panel "Cancion": pista actual y estado del reproductor
+        //Pannel "Song": current track and state of the player
         Elements song_elements;
         if (const auto current = playlist.current()) {
             std::string status = "Detenido";
@@ -187,7 +196,8 @@ int main() {
             song_elements.push_back(text(" Sin cancion actual") | dim);
         }
 
-        // Panel "Cola": una sola lectura consistente de la lista (snapshot)
+        //Panel "Tail": only a reading consistent list obtained from 
+        //snapshot function
         Elements queue_elements;
         const auto snapshot = playlist.snapshot();
         const std::size_t shown = std::min(snapshot.tracks.size(), MAX_VISIBLE_LINES);
@@ -230,8 +240,8 @@ int main() {
 
     app.Loop(renderer);
 
-    // Si se salio por Ctrl+C u otra via distinta del comando exit.
+    // Shutdowns the engine when the process is finished by using Ctrl + c
     engine.shutdown();
 
     return 0;
-}
+}

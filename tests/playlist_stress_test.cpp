@@ -1,17 +1,4 @@
-// Prueba de estres de playlist::Playlist (problema Lectores-Escritores).
-//
-// Compilar y ejecutar (desde la raiz del proyecto):
-//   g++ -std=c++20 -g -fsanitize=thread  -pthread -Isrc tests/playlist_stress_test.cpp src/playlist/playlist.cpp -o stress_tsan && ./stress_tsan
-//   g++ -std=c++20 -g -fsanitize=address -pthread -Isrc tests/playlist_stress_test.cpp src/playlist/playlist.cpp -o stress_asan && ./stress_asan
-//
-// Que valida:
-//  - 4 escritores (add/remove/move/select/advance/previous/clear) y 4 lectores
-//    (snapshot/current/peek_next/size) concurrentes sobre la misma lista.
-//  - 1 "motor" simulado que usa wait_for_current() + on_track_finished(epoch).
-//  - Invariantes en cada snapshot: ids unicos y, si hay pista actual, su id
-//    esta en la lista (el cursor nunca apunta a una pista eliminada).
-//  - El epoch nunca retrocede.
-//  - close() despierta al motor y todos los hilos terminan (sin deadlock).
+//Include of required tools
 #include <atomic>
 #include <chrono>
 #include <cstdlib>
@@ -21,7 +8,10 @@
 #include <thread>
 #include <vector>
 
+//Include of required files
 #include "playlist/playlist.h"
+
+//Stress test for trying out the capabilities of the program
 
 using namespace std::chrono_literals;
 
@@ -86,18 +76,16 @@ int main() {
         });
     }
 
-    // Motor simulado: mismo bucle que PlaybackEngine::run().
     std::atomic<long> finished{0};
     threads.emplace_back([&] {
         while (auto sel = pl.wait_for_current()) {
-            std::this_thread::sleep_for(1ms);  // "reproduciendo"
+            std::this_thread::sleep_for(1ms);  
             if (pl.on_track_finished(sel->epoch)) ++finished;
         }
     });
 
     std::this_thread::sleep_for(3s);
     g_stop = true;
-    // Los hilos de usuario terminan solos; el motor sale por close().
     for (std::size_t i = 0; i + 1 < threads.size(); ++i) threads[i].join();
     pl.close();
     threads.back().join();

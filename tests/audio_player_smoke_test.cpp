@@ -1,3 +1,4 @@
+//Include of required tools
 #include <cstdlib>
 #include <chrono>
 #include <filesystem>
@@ -5,14 +6,15 @@
 #include <string>
 #include <thread>
 
+//Include of required programs
 #include "audio/audio_player.h"
 
+//Test
 int main() {
 #if defined(_WIN32)
     std::cout << "SKIP: esta prueba de humo requiere POSIX/Linux\n";
     return 0;
 #else
-    // El backend SDL dummy permite probar el pipeline en CI/servidores sin tarjeta de audio.
     setenv("SDL_AUDIODRIVER", "dummy", 1);
     const std::string path = "/tmp/concurrent-audio-smoke.wav";
     const std::string command = "ffmpeg -nostdin -v error -f lavfi -i sine=frequency=440:duration=2 -ar 44100 -ac 2 -y '" + path + "'";

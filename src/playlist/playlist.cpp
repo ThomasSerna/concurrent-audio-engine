@@ -115,12 +115,12 @@ std::optional<Track> Playlist::current_locked() const {
 std::optional<Track> Playlist::advance_locked(Mutation& m) {
     const auto index = current_index_locked();
     if (!index) {
-        return std::nullopt;  // ya estamos en "fin de lista": nada que avanzar
+        return std::nullopt;  
     }
     m.mark_selection();
     const std::size_t next = *index + 1;
     if (next >= tracks_.size()) {
-        current_.reset();  // se terminó la lista
+        current_.reset();  
         return std::nullopt;
     }
     current_ = tracks_[next].id;
@@ -159,7 +159,7 @@ bool Playlist::remove(TrackId id) {
         m.touched = true;
         if (was_current) {
             if (it != tracks_.end()) {
-                current_ = it->id;  // la siguiente ocupa ahora el mismo índice
+                current_ = it->id;  
             } else {
                 current_.reset();
             }
@@ -184,7 +184,7 @@ bool Playlist::move(TrackId id, std::size_t new_index) {
         Track moved = std::move(*it);
         tracks_.erase(it);
         tracks_.insert(tracks_.begin() + static_cast<std::ptrdiff_t>(to), std::move(moved));
-        m.touched = true;  // el cursor sigue a la pista por id: no cambia la selección
+        m.touched = true;  
         return true;
     });
 }

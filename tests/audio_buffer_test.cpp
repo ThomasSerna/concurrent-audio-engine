@@ -1,3 +1,4 @@
+//Include of required tools
 #include <atomic>
 #include <chrono>
 #include <cstddef>
@@ -5,15 +6,17 @@
 #include <thread>
 #include <vector>
 
+//Include of required files
 #include "audio/circular_audio_buffer.h"
 
+//Test for trying out that all tools work fine
 int main() {
     constexpr std::size_t total = 2 * 1024 * 1024 + 137;
     std::vector<char> source(total);
     for (std::size_t i = 0; i < source.size(); ++i)
         source[i] = static_cast<char>((i * 37U + 11U) % 251U);
     std::vector<char> destination(total);
-    CircularAudioBuffer buffer(4093); // tamaño no potencia de dos: prueba el wrap-around
+    CircularAudioBuffer buffer(4093); 
     std::atomic<bool> writer_ok{false};
 
     std::thread producer([&] {
@@ -36,7 +39,6 @@ int main() {
         std::cerr << "FAIL: datos perdidos, alterados o productor bloqueado\n";
         return 1;
     }
-    // Cerrar debe despertar también a un productor bloqueado por búfer lleno.
     CircularAudioBuffer cancellation(16);
     std::vector<char> oversized(4096, 'x');
     std::atomic<bool> cancelled_writer_returned{false};
