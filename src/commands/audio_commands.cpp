@@ -1,10 +1,12 @@
+//Include of required files
 #include "commands.h"
-
 #include "playback/playback_engine.h"
 #include "playlist/playlist.h"
 
 namespace {
 
+//Reviews that engine and playlist are
+//not Null pointers
 bool engine_ready(AppState& state) {
     if (state.engine == nullptr || state.playlist == nullptr) {
         state.console_lines.push_back("El motor de reproduccion no esta inicializado");
@@ -13,8 +15,9 @@ bool engine_ready(AppState& state) {
     return true;
 }
 
-}  // namespace
+}  
 
+//Adds the 4 commands to the list
 void register_audio_commands() {
 
     commands.push_back({
@@ -46,7 +49,8 @@ void register_audio_commands() {
     });
 }
 
-
+//Adds the song and then the path to those args
+//and then plays the song in the list
 int cmd_play(const std::vector<std::string>& args, AppState& state) {
 
     if (!engine_ready(state)) {
@@ -54,14 +58,13 @@ int cmd_play(const std::vector<std::string>& args, AppState& state) {
     }
 
     if (!args.empty()) {
-        // play <archivo>: lo agrega a la lista y salta a el.
         const auto id = add_path_from_args(args, state);
         if (!id) {
             return 1;
         }
         state.playlist->select(*id);
     } else if (!state.playlist->current()) {
-        // Sin pista actual (lista vacia o ya termino): reinicia desde la primera.
+        //Without any track to read more restarts since the first song
         const auto snapshot = state.playlist->snapshot();
         if (snapshot.tracks.empty()) {
             state.console_lines.push_back("La lista esta vacia. Usa: add <archivo>");
@@ -79,7 +82,8 @@ int cmd_play(const std::vector<std::string>& args, AppState& state) {
     return 0;
 }
 
-
+//Command for pausing with commetaries
+//for indicating the user what is happening
 int cmd_pause(const std::vector<std::string>&, AppState& state) {
 
     if (!engine_ready(state)) {
@@ -102,7 +106,8 @@ int cmd_pause(const std::vector<std::string>&, AppState& state) {
     return 0;
 }
 
-
+//Command for resuming with commetaries
+//for indicating the user what is happening
 int cmd_resume(const std::vector<std::string>&, AppState& state) {
 
     if (!engine_ready(state)) {
@@ -125,7 +130,8 @@ int cmd_resume(const std::vector<std::string>&, AppState& state) {
     return 0;
 }
 
-
+//Command for stopping with commetaries
+//for indicating the user what is happening
 int cmd_stop(const std::vector<std::string>&, AppState& state) {
 
     if (!engine_ready(state)) {
