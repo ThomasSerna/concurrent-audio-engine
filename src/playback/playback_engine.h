@@ -1,5 +1,8 @@
+//Include guard to evite reading the project
+//more than once
 #pragma once
 
+//Include of required tools
 #include <atomic>
 #include <condition_variable>
 #include <cstdint>
@@ -9,72 +12,83 @@
 #include <thread>
 #include <vector>
 
+//Include of required files
 #include "audio/audio_player.h"
 #include "playlist/playlist.h"
 
-// Motor de reproduccion: hilo propio que consume la Playlist.
-//
-// Es el "USO DESDE EL MOTOR DE AUDIO" descrito en playlist.h:
-//   - bloquea en playlist.wait_for_current() (sin busy-wait),
-//   - arranca la pista actual con AudioPlayer (ffplay),
-//   - vigila si el usuario cambio la seleccion (selection_epoch) o si la pista
-//     termino sola (proceso ffplay finalizado) y entonces llama a
-//     playlist.on_track_finished(epoch), que avanza solo si nadie se adelanto.
-//
-// Hilos: el hilo de la UI llama a play/stop/pause/resume/take_messages; el hilo
-// del motor llama a AudioPlayer y a la Playlist. AudioPlayer tiene su propio
-// mutex, y la Playlist es segura entre hilos por diseno.
+//Engine to execute the list of 
+//songs that will be reproduced
 class PlaybackEngine {
 public:
+    //constructor of the object casting a playlist object
     explicit PlaybackEngine(playlist::Playlist& playlist);
+    //Destroyer of the object
     ~PlaybackEngine();
 
+    //Indicates that an instance of PlayackEngine cant be
+    //copied 
     PlaybackEngine(const PlaybackEngine&) = delete;
     PlaybackEngine& operator=(const PlaybackEngine&) = delete;
 
-    // Se invoca desde el hilo del motor cuando cambia algo visible (nueva pista,
-    // fin de pista, error). Debe llamarse ANTES de start().
+    //Function that recalls the cal back function to clean the 
+    //screen
     void set_redraw_callback(std::function<void()> callback);
 
+    //Functions of the playback engine
     void start();
-    void shutdown();  // idempotente: cierra la playlist, une el hilo, mata ffplay
+    void shutdown();  
 
-    // Quita el estado "detenido por el usuario": el motor reproduce la pista actual.
     void play();
-    // Detiene la pista y NO avanza. Devuelve false si no habia nada sonando.
     bool stop();
     bool pause();
     bool resume();
 
+    //Indicates the state of the audio player
     PlayerState state();
+    //Indicates if the user stopped the player
     bool user_stopped();
 
-    // Despierta al motor de inmediato (lo llaman los comandos que cambian la
-    // lista, p. ej. remove/qclear, para que la reaccion no espere al sondeo).
+    //Notifies a change in the state of 
+    //the audio player
     void notify_change();
 
-    // Mensajes del motor (errores, etc.) para volcarlos a la consola de la UI.
+    //Receives the messages sent to the player
     std::vector<std::string> take_messages();
 
 private:
+    //Execute the audio player
     void run();
-    bool wait_until_play_allowed();  // false si se esta cerrando
+    //Waiting until the song can be executed
+    bool wait_until_play_allowed();  
+    //Send message of the player situation
     void post_message(std::string message);
+    //Request to redraw entirety of console
     void request_redraw();
 
+    //List of songs to play by reference
     playlist::Playlist& playlist_;
+    //The instance of audio player
     AudioPlayer player_;
+    //The execution thread
     std::thread worker_;
+    //function to request redrawing screen
     std::function<void()> redraw_;
 
-    std::mutex control_mutex_;  // protege user_stopped_ y shutting_down_
+    //lock for the flags
+    std::mutex control_mutex_;
+    // alarm to wake up the flags  
     std::condition_variable control_cv_;
+    //Request to stop the player
     bool user_stopped_ = false;
+    //Request to end up the program
     bool shutting_down_ = false;
-    // Sube en cada stop(): permite distinguir "stop del usuario" de "fin natural"
-    // aunque el usuario haga stop() + play() entre dos sondeos del motor.
+    //Allows to differentiate when 
+    //the audio player was paused
+    //from a song was finished
     std::atomic<std::uint64_t> stop_count_{0};
 
+    //Locks and message errors to show in
+    //console
     std::mutex messages_mutex_;
     std::vector<std::string> messages_;
 };
