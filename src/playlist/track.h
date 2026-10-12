@@ -1,23 +1,31 @@
+//Include guard for reading the file only once
 #pragma once
 
+//Include of required tools
 #include <cstdint>
 #include <filesystem>
 #include <string>
 
+//Wrapper for encapsulating the files
+//contained in this folder under the 
+//name playlist
 namespace playlist {
 
-// Identificador estable de una pista. Nunca se reutiliza durante la vida de la
-// Playlist, así que a diferencia de un índice no queda "apuntando a otra
-// canción" cuando alguien inserta, elimina o reordena.
+//This will be used to provide
+//Unique ids to every song in 
+//a playlist eviting consistency 
+//issues
 using TrackId = std::uint64_t;
 
-// Tipo valor: Playlist siempre devuelve COPIAS. Ningún hilo conserva
-// referencias ni punteros a elementos internos, de modo que eliminar una pista
-// no puede dejar al hilo decodificador con memoria liberada.
+//This struct defines that a track
+//is made out of an identifier
+//that was defined previously
+//a path from which the song 
+//comes from and a title
 struct Track {
     TrackId id{};
     std::filesystem::path path;
     std::string title;
 };
 
-}  // namespace playlist
+}
