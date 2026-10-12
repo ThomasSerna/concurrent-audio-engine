@@ -16,7 +16,7 @@
 #include "playlist/rw_lock.h"
 #include "playlist/track.h"
 
-////Wrapper for encapsulating the files
+//Wrapper for encapsulating the files
 //contained in this folder under the 
 //name playlist
 namespace playlist {
