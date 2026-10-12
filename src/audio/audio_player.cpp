@@ -1,11 +1,14 @@
+//Include of required files
 #include "audio_player.h"
 
+//Include of required tool 
 #if defined(_WIN32)
 #include <cstdlib>
 #include <io.h>
 #include <string>
 #include <vector>
 
+//Windows version, the comments will be in the linux version
 namespace {
 
 std::wstring to_wide_string(const std::string& value) {
@@ -164,8 +167,10 @@ bool AudioPlayer::prefetch(const std::string&) {
     return false;  // la precarga solo existe en la ruta POSIX
 }
 
+//Linux version (Comments will be focused here)
 #else
 
+//Include of the required tools
 #include <cerrno>
 #include <csignal>
 #include <cstring>
@@ -175,7 +180,7 @@ bool AudioPlayer::prefetch(const std::string&) {
 #include <vector>
 
 namespace {
-
+//Waits to collect dead processes with waitpid
 bool wait_for_child(ProcessId child) {
     if (child <= 0) return true;
     int status = 0;
@@ -187,6 +192,7 @@ bool wait_for_child(ProcessId child) {
     return true;
 }
 
+//Closes a pipeline for consuming a track
 void close_fd(int& fd) {
     if (fd >= 0) {
         ::close(fd);
@@ -196,6 +202,8 @@ void close_fd(int& fd) {
 
 } // namespace
 
+//Reviews if the process is finished or not using waitpid 
+//to verify all the process
 void AudioPlayer::refresh() {
     if (pid > 0) {
         int status = 0;
@@ -207,28 +215,32 @@ void AudioPlayer::refresh() {
         const pid_t result = waitpid(output_pid_, &status, WNOHANG);
         if (result == output_pid_ || (result < 0 && errno == ECHILD)) {
             output_pid_ = -1;
-            // ffplay termino: el audio ya se reprodujo por completo.
             state.store(PlayerState::STOPPED, std::memory_order_release);
         }
     }
 }
 
+//Starts the decoding process using ffmpeg
 ProcessId AudioPlayer::start_decoder(const std::string& path, int& read_fd) {
-    // O_CLOEXEC: cada hijo hereda solo lo necesario. Sin esto, el ffmpeg de la
-    // precarga heredaba el extremo lector del pipe de la pista actual y impedia
-    // que el decodificador anterior recibiera EPIPE, bloqueando la parada.
+
     int pipe_fds[2] = {-1, -1};
+    //Crates a pipeline with 2 sides 1 for reading and 1 for writing
     if (pipe2(pipe_fds, O_CLOEXEC) != 0) return -1;
+    //Makes a copy of the program
     const pid_t child = fork();
     if (child == 0) {
+        //Connects the normal exit to the pipeline
         dup2(pipe_fds[1], STDOUT_FILENO);
         ::close(pipe_fds[0]);
         ::close(pipe_fds[1]);
+        //Converts the child into a ffmpeg reads the file and
+        //emits a crude noise in case execlp fails
         execlp("ffmpeg", "ffmpeg", "-nostdin", "-v", "error", "-i", path.c_str(),
                "-f", "s16le", "-acodec", "pcm_s16le", "-ar", "44100", "-ac", "2",
                "pipe:1", static_cast<char*>(nullptr));
         _exit(127);
     }
+    //The father closes the pipe and saves the reading returning the id of the son
     ::close(pipe_fds[1]);
     if (child < 0) {
         ::close(pipe_fds[0]);
@@ -238,9 +250,11 @@ ProcessId AudioPlayer::start_decoder(const std::string& path, int& read_fd) {
     return child;
 }
 
+//Kills sigterm, the ffmpeg of the next song closing
+//and gathering the pipe
 void AudioPlayer::drop_prefetch_locked() {
     if (prefetch_pid_ > 0) {
-        kill(prefetch_pid_, SIGTERM);  // ffmpeg puede estar bloqueado escribiendo en su pipe
+        kill(prefetch_pid_, SIGTERM);  
     }
     close_fd(prefetch_fd_);
     if (prefetch_pid_ > 0) {
@@ -250,9 +264,11 @@ void AudioPlayer::drop_prefetch_locked() {
     prefetch_path_.clear();
 }
 
+//Prepares the pipeline for reading the next song
+//making it more agile the process of reading
 bool AudioPlayer::prefetch(const std::string& path) {
     std::lock_guard<std::recursive_mutex> guard(mutex_);
-    if (prefetch_fd_ >= 0 && prefetch_path_ == path) return true;  // ya esta lista
+    if (prefetch_fd_ >= 0 && prefetch_path_ == path) return true;  
     drop_prefetch_locked();
     if (access(path.c_str(), R_OK) != 0) return false;
 
@@ -265,28 +281,45 @@ bool AudioPlayer::prefetch(const std::string& path) {
     return true;
 }
 
+//-Stops the song that is played at that moment
+//-Verifies the existence of the next file to play
+//-If it prefetches the same song then it reuses the
+//same pipeline in case it doesnt it throws a new 
+//ffmpeg
+//-Creates a new pipeline to talk to ffplay
+//-The child connects the pipeline to the entry and then
+//turns itself into an ffplay
+//-The parent keeps the numbers of the processes and 
+//pipelines, then resets the buffer
+//-Stablishes SIGPIPE into ignore mode so rewriting
+//a broken pipeline does not kill the program
+//-Stablishes the process in PLAYING and throws the
+//needed threads for reading and consuming tracks
+//-If something fails in the way, it kills the 
+//process and then returns false
+
 bool AudioPlayer::play(const std::string& path) {
     std::lock_guard<std::recursive_mutex> guard(mutex_);
-    stop_locked();  // solo para la pista anterior; el prefetch no se toca aqui
+    //Stops the song that is currently playing
+    stop_locked();  
 
+    //Verifies the file existence
     if (access(path.c_str(), R_OK) != 0) return false;
 
     int decoded_fd = -1;
     ProcessId decoder = -1;
     if (prefetch_fd_ >= 0 && prefetch_path_ == path) {
-        // La pista ya estaba decodificandose: se reutiliza su decodificador.
         decoded_fd = prefetch_fd_;
         decoder = prefetch_pid_;
         prefetch_fd_ = -1;
         prefetch_pid_ = 0;
         prefetch_path_.clear();
     } else {
-        drop_prefetch_locked();  // el prefetch era de otra pista: ya no sirve
+        drop_prefetch_locked();  
         decoder = start_decoder(path, decoded_fd);
         if (decoder < 0) return false;
     }
 
-    // Pipe hacia ffplay (salida de audio).
     int output_pipe[2] = {-1, -1};
     if (pipe2(output_pipe, O_CLOEXEC) != 0) {
         kill(decoder, SIGTERM);
@@ -339,6 +372,9 @@ bool AudioPlayer::play(const std::string& path) {
     return true;
 }
 
+//Reads 16kb from the pipeline of ffmpeg and then puts them
+//into the buffer_.write. If ffmpeg finishes, it closes the 
+//pipeline and the buffer
 void AudioPlayer::produce_pcm() {
     std::vector<char> chunk(16 * 1024);
     for (;;) {
@@ -352,9 +388,11 @@ void AudioPlayer::produce_pcm() {
         if (!buffer_.write(chunk.data(), static_cast<std::size_t>(count))) break;
     }
     close_fd(decoded_fd_);
-    buffer_.close(); // despierta al consumidor, que vacía lo que quede en el búfer
+    buffer_.close();
 }
 
+//It does the same process as produce_pcm but using ffplay
+//to consume everything and emit the song
 void AudioPlayer::consume_pcm() {
     std::vector<char> chunk(16 * 1024);
     for (;;) {
@@ -374,17 +412,20 @@ void AudioPlayer::consume_pcm() {
         }
         if (offset < count) break;
     }
-    // Aqui NO se marca STOPPED: el fin real lo detecta refresh() cuando ffplay
-    // sale, para no cortar el final de la pista (ffplay aun tiene audio en curso).
+
     close_fd(output_fd_);
 }
 
+//Closes the buffer and wakes up the threads
+//SIGCONT requests finsihing the processes going on
+//Sends SIGTERM to request finishing the processes
+//Waits for the threads to finish
+//Closes the pipeline gathering the processes with
+//waitpid and then uses STOPPED
 void AudioPlayer::stop_locked() {
     stopping_.store(true, std::memory_order_release);
     buffer_.close();
 
-    // Un proceso detenido con SIGSTOP no procesa SIGTERM hasta reanudarse:
-    // sin este SIGCONT, join() de los hilos se bloquea para siempre.
     if (pid > 0) kill(pid, SIGCONT);
     if (output_pid_ > 0) kill(output_pid_, SIGCONT);
 
@@ -407,6 +448,9 @@ void AudioPlayer::stop_locked() {
     state.store(PlayerState::STOPPED, std::memory_order_release);
 }
 
+//Calls stop_locked to stop the process and
+//discards the prefetched if there was 
+//soemthing active
 bool AudioPlayer::stop() {
     std::lock_guard<std::recursive_mutex> guard(mutex_);
     const bool was_active = state.load(std::memory_order_acquire) != PlayerState::STOPPED ||
@@ -416,12 +460,14 @@ bool AudioPlayer::stop() {
     return was_active;
 }
 
+//Sends a SIGSTOP signal to stop the processes of ffmpeg and ffplay.
+//only works if the process is PLAYING. it will undone the things
+//done if something fails
 bool AudioPlayer::pause() {
     std::lock_guard<std::recursive_mutex> guard(mutex_);
     refresh();
     if (state.load(std::memory_order_acquire) != PlayerState::PLAYING || output_pid_ <= 0)
         return false;
-    // El decodificador puede haber terminado antes que el audio almacenado en el búfer.
     if (pid > 0 && kill(pid, SIGSTOP) != 0) return false;
     if (kill(output_pid_, SIGSTOP) != 0) {
         if (pid > 0) kill(pid, SIGCONT);
@@ -431,6 +477,7 @@ bool AudioPlayer::pause() {
     return true;
 }
 
+//Makes the opposite of pause
 bool AudioPlayer::resume() {
     std::lock_guard<std::recursive_mutex> guard(mutex_);
     refresh();
@@ -445,8 +492,11 @@ bool AudioPlayer::resume() {
     return true;
 }
 
+//sames as stop used for executing it with 
+//a bollean indication
 bool AudioPlayer::close() { return stop(); }
 
+//Calls refresh and returns the state
 PlayerState AudioPlayer::getState() {
     std::lock_guard<std::recursive_mutex> guard(mutex_);
     refresh();
@@ -455,4 +505,5 @@ PlayerState AudioPlayer::getState() {
 
 #endif
 
+//Destroys the player to stop any process going on
 AudioPlayer::~AudioPlayer() { close(); }
