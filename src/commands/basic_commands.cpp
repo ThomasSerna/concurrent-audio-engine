@@ -1,5 +1,9 @@
+//Include of required father file
 #include "commands.h"
 
+//Function that only register the
+//basic commands to execute the
+//audio player
 void register_basic_commands() {
 
     commands.push_back({
@@ -24,6 +28,8 @@ void register_basic_commands() {
     });
 }
 
+//Function that erases all the lines 
+//in the console
 int cmd_clear(const std::vector<std::string>& args, AppState& state) {
 
     state.console_lines.clear();
@@ -31,6 +37,7 @@ int cmd_clear(const std::vector<std::string>& args, AppState& state) {
     return 0;
 }
 
+//raises a flag to indicate the main to close the program
 int cmd_exit(const std::vector<std::string>& args, AppState& state) {
 
     state.should_exit = true;
@@ -38,6 +45,8 @@ int cmd_exit(const std::vector<std::string>& args, AppState& state) {
     return 0;
 }
 
+//Gives an all insight list of indications about 
+//how do certain commands work
 int cmd_help(const std::vector<std::string>& args, AppState& state) {
 
     state.console_lines.push_back(
